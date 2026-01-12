@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Print Component",
-    "slug": "print-component",
+    "name": "Test Expo Print",
+    "slug": "test-expo-print",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
