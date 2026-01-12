@@ -1,38 +1,75 @@
-# Print Component - Expo Snack
+# Test Expo Print
 
-A professional showcase of expo-print with various print options and templates. Demonstrates printing HTML content, PDF generation, custom orientations, margins, and pre-built templates for invoices, reports, and labels.
+A comprehensive print showcase using expo-print with image picker, file picker, permission handling, and modern card-based UI design.
 
 ## Features
 
-- ✅ **Direct Printing** - Print HTML content directly to printer
+- ✅ **Image Printing** - Pick images from gallery or take photos, then print them
+- ✅ **File Printing** - Pick files (PDF, images, text) and print them
+- ✅ **Permission Handling** - Automatic permission requests for camera and media library
+- ✅ **HTML Printing** - Print HTML content directly
 - ✅ **PDF Generation** - Convert HTML to PDF files
-- ✅ **Custom Orientations** - Portrait and landscape printing
-- ✅ **Custom Margins** - Configure print margins
-- ✅ **Invoice Templates** - Professional invoice/receipt templates
-- ✅ **Report Templates** - Formatted report templates
-- ✅ **Label Templates** - Shipping/shipping label templates
-- ✅ **Share PDF** - Generate and share PDF files
-- ✅ **Professional UI** - Beautiful, modern interface
+- ✅ **Templates** - Invoice, report, and label templates
+- ✅ **Print Options** - Portrait/landscape orientation, custom margins
+- ✅ **Modern UI** - Card-based design with clean, professional interface
 
 ## Installation in Expo Snack
 
 1. Copy all files to your Snack
 2. Dependencies will be automatically installed:
    - `expo-print`
+   - `expo-image-picker`
+   - `expo-document-picker`
    - `expo-file-system`
    - `expo-sharing`
-   - `expo-linear-gradient`
    - `@expo/vector-icons`
 3. Run!
 
 ## Usage
 
-### Basic Print
+### Image Printing
+
+```tsx
+import { ImageService } from './services/ImageService';
+
+// Pick image from gallery
+const result = await ImageService.pickImageFromGallery();
+if (!result.canceled && result.assets[0]) {
+  await ImageService.printImage(result.assets[0].uri);
+}
+
+// Take photo
+const photo = await ImageService.takePhoto();
+if (!photo.canceled && photo.assets[0]) {
+  await ImageService.printImage(photo.assets[0].uri);
+}
+```
+
+### File Printing
+
+```tsx
+import { FileService } from './services/FileService';
+
+// Pick file
+const file = await FileService.pickDocument();
+if (!file.canceled && file.assets[0]) {
+  // Print PDF
+  await FileService.printPDF(file.assets[0].uri);
+  
+  // Print image file
+  await FileService.printImageFile(file.assets[0].uri);
+  
+  // Print text file
+  await FileService.printTextFile(file.assets[0].uri);
+}
+```
+
+### HTML Printing
 
 ```tsx
 import { PrintService } from './services/PrintService';
 
-const html = '<html><body><h1>Hello World</h1></body></html>';
+const html = '<html><body><h1>Hello</h1></body></html>';
 
 // Print directly
 await PrintService.printHTML(html);
@@ -41,93 +78,49 @@ await PrintService.printHTML(html);
 const { uri } = await PrintService.printToFile(html);
 ```
 
-### Print with Options
+### Permission Handling
 
-```tsx
-// Custom orientation
-await PrintService.printWithOrientation(html, 'landscape');
+Permissions are automatically requested when needed:
+- Camera permission for taking photos
+- Media library permission for picking images
+- Document picker doesn't require explicit permissions
 
-// Custom margins
-await PrintService.printWithMargins(html, {
-  top: 20,
-  bottom: 20,
-  left: 20,
-  right: 20,
-});
-```
+## Services
 
-### Invoice Template
+### ImageService
+- `pickImageFromGallery()` - Pick image from gallery
+- `takePhoto()` - Take photo with camera
+- `printImage(uri)` - Print image
+- `generateImagePDF(uri)` - Generate PDF from image
+- `requestCameraPermissions()` - Request camera permission
+- `requestMediaLibraryPermissions()` - Request media library permission
 
-```tsx
-const invoiceHTML = PrintService.generateInvoiceHTML({
-  title: 'Invoice #12345',
-  date: '2024-01-15',
-  items: [
-    { name: 'Product A', quantity: 2, price: 29.99 },
-    { name: 'Product B', quantity: 1, price: 49.99 },
-  ],
-  total: 109.97,
-});
+### FileService
+- `pickDocument()` - Pick any file
+- `pickPDF()` - Pick PDF file
+- `printPDF(uri)` - Print PDF file
+- `printImageFile(uri)` - Print image file
+- `printTextFile(uri)` - Print text file
+- `readFileAsBase64(uri)` - Read file as base64
+- `readFileAsString(uri)` - Read file as string
 
-await PrintService.printHTML(invoiceHTML);
-```
+### PrintService
+- `printHTML(html, options?)` - Print HTML directly
+- `printToFile(html, options?)` - Generate PDF
+- `printWithOrientation(html, orientation)` - Print with orientation
+- `printWithMargins(html, margins)` - Print with custom margins
+- `generateInvoiceHTML(data)` - Generate invoice template
+- `generateReportHTML(data)` - Generate report template
+- `generateLabelHTML(data)` - Generate label template
 
-### Report Template
+## Design
 
-```tsx
-const reportHTML = PrintService.generateReportHTML({
-  title: 'Monthly Report',
-  author: 'John Doe',
-  date: '2024-01-15',
-  content: '<h2>Report Content</h2><p>Details...</p>',
-});
-
-await PrintService.printToFile(reportHTML);
-```
-
-### Generate and Share PDF
-
-```tsx
-await PrintService.generateAndSharePDF(
-  html,
-  'document.pdf'
-);
-```
-
-## Print Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `html` | `string` | HTML content to print |
-| `orientation` | `'portrait' \| 'landscape'` | Print orientation |
-| `margins` | `object` | Custom margins (top, bottom, left, right) |
-| `width` | `number` | Page width |
-| `height` | `number` | Page height |
-| `base64` | `boolean` | Return base64 encoded PDF |
-
-## Templates
-
-### Invoice Template
-- Professional invoice layout
-- Itemized list with quantities and prices
-- Total calculation
-- Customizable styling
-
-### Report Template
-- Formatted report layout
-- Header with title, author, date
-- Content area for report body
-- Footer
-
-### Label Template
-- Compact label format
-- Address support
-- Barcode support
-- Border styling
-
-## Example Snack
-
-See `App.tsx` for complete examples showcasing all print options and templates.
+- **Card-based Layout** - Clean, modern card design
+- **Color Variants** - Different colors for different action types
+- **Image Preview** - Preview selected images before printing
+- **File Info Display** - Show selected file information
+- **Loading States** - Visual feedback during operations
+- **Error Handling** - User-friendly error messages
 
 ## Platform Support
 
@@ -135,11 +128,16 @@ See `App.tsx` for complete examples showcasing all print options and templates.
 - ✅ Android
 - ⚠️ Web (limited support)
 
-## Notes
+## Permissions
 
-- Printing requires physical device or simulator with print capabilities
-- PDF generation works on all platforms
-- Some features may vary by platform
+The app automatically requests permissions when needed:
+- **Camera** - Required for taking photos
+- **Media Library** - Required for picking images
+- **Storage** - Required for file access (handled automatically)
+
+## Example Snack
+
+See `App.tsx` for complete examples showcasing all features.
 
 ## License
 
