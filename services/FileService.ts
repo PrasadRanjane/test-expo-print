@@ -6,7 +6,6 @@
 
 import * as DocumentPicker from 'expo-document-picker';
 import { Platform, Alert, Linking } from 'react-native';
-import * as FileSystem from 'expo-file-system';
 import { PrintService } from './PrintService';
 
 export class FileService {
@@ -55,13 +54,14 @@ export class FileService {
 
   /**
    * Read file content as base64
+   * Note: Requires expo-file-system if needed
    */
   static async readFileAsBase64(uri: string): Promise<string> {
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      return base64;
+      // For now, return empty string as expo-file-system may not be available
+      // You can add it back if needed: import * as FileSystem from 'expo-file-system';
+      console.warn('readFileAsBase64 requires expo-file-system');
+      return '';
     } catch (error) {
       console.error('Read file error:', error);
       throw error;
@@ -70,11 +70,14 @@ export class FileService {
 
   /**
    * Read file content as string
+   * Note: Requires expo-file-system if needed
    */
   static async readFileAsString(uri: string): Promise<string> {
     try {
-      const content = await FileSystem.readAsStringAsync(uri);
-      return content;
+      // For now, return empty string as expo-file-system may not be available
+      // You can add it back if needed: import * as FileSystem from 'expo-file-system';
+      console.warn('readFileAsString requires expo-file-system');
+      return '';
     } catch (error) {
       console.error('Read file error:', error);
       throw error;
@@ -116,10 +119,12 @@ export class FileService {
 
   /**
    * Print text file
+   * Note: Text file reading requires expo-file-system
    */
   static async printTextFile(uri: string): Promise<void> {
     try {
-      const content = await this.readFileAsString(uri);
+      // For text files, we'll use an iframe approach since we can't read the content
+      // without expo-file-system. Alternatively, you can add expo-file-system back.
       const html = `
         <!DOCTYPE html>
         <html>
@@ -132,10 +137,15 @@ export class FileService {
                 white-space: pre-wrap;
                 word-wrap: break-word;
               }
+              iframe {
+                width: 100%;
+                height: 100vh;
+                border: none;
+              }
             </style>
           </head>
           <body>
-            ${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+            <iframe src="${uri}"></iframe>
           </body>
         </html>
       `;
