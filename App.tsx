@@ -1,15 +1,13 @@
 /**
- * Expo Snack: Print Component Showcase
+ * Expo Snack: Test Expo Print
  * 
- * Professional showcase of expo-print with various print options:
- * - Direct printing
+ * Complete print showcase with:
+ * - HTML printing
  * - PDF generation
- * - Custom orientations
- * - Custom margins
- * - Invoice/Receipt templates
- * - Report templates
- * - Label templates
- * - Share PDF functionality
+ * - Image picker and printing
+ * - File picker and printing
+ * - Permission handling
+ * - Modern card-based design
  */
 
 import React, { useState } from 'react';
@@ -19,41 +17,119 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  useColorScheme,
   StatusBar,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { PrintButton } from './components/PrintButton';
 import { PrintService } from './services/PrintService';
+import { ImageService } from './services/ImageService';
+import { FileService } from './services/FileService';
 
 export default function App() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const [loading, setLoading] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ name: string; uri: string } | null>(null);
 
-  const colors = {
-    background: isDark ? '#0f172a' : '#f8fafc',
-    surface: isDark ? '#1e293b' : '#ffffff',
-    text: isDark ? '#f1f5f9' : '#1e293b',
-    textSecondary: isDark ? '#cbd5e1' : '#64748b',
-    primary: '#6366f1',
-    primaryLight: '#818cf8',
-  };
-
-  const handlePrint = async (action: () => Promise<void>, name: string) => {
+  const handleAction = async (
+    action: () => Promise<void>,
+    name: string
+  ) => {
     setLoading(name);
     try {
       await action();
       Alert.alert('Success', `${name} completed successfully!`);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Print failed');
+      Alert.alert('Error', error.message || `${name} failed`);
     } finally {
       setLoading(null);
     }
   };
 
-  // Sample HTML content
+  const handlePickImage = async () => {
+    try {
+      const result = await ImageService.pickImageFromGallery();
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to pick image');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const result = await ImageService.takePhoto();
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to take photo');
+    }
+  };
+
+  const handlePickFile = async () => {
+    try {
+      const result = await FileService.pickDocument();
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setSelectedFile({
+          name: result.assets[0].name || 'Unknown',
+          uri: result.assets[0].uri,
+        });
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to pick file');
+    }
+  };
+
+  const ActionCard = ({
+    icon,
+    title,
+    description,
+    onPress,
+    loading: cardLoading,
+    variant = 'primary',
+  }: {
+    icon: keyof typeof MaterialIcons.glyphMap;
+    title: string;
+    description: string;
+    onPress: () => void;
+    loading?: boolean;
+    variant?: 'primary' | 'secondary' | 'success' | 'warning';
+  }) => {
+    const variantColors = {
+      primary: { bg: '#3b82f6', light: '#dbeafe' },
+      secondary: { bg: '#8b5cf6', light: '#ede9fe' },
+      success: { bg: '#10b981', light: '#d1fae5' },
+      warning: { bg: '#f59e0b', light: '#fef3c7' },
+    };
+
+    const colors = variantColors[variant];
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { borderLeftColor: colors.bg }]}
+        onPress={onPress}
+        disabled={cardLoading}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: colors.light }]}>
+          {cardLoading ? (
+            <ActivityIndicator color={colors.bg} size="small" />
+          ) : (
+            <MaterialIcons name={icon} size={28} color={colors.bg} />
+          )}
+        </View>
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={styles.cardDescription}>{description}</Text>
+        </View>
+        <MaterialIcons name="chevron-right" size={24} color="#9ca3af" />
+      </TouchableOpacity>
+    );
+  };
+
   const sampleHTML = `
     <!DOCTYPE html>
     <html>
@@ -61,12 +137,17 @@ export default function App() {
         <meta charset="utf-8">
         <style>
           body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 40px;
+            color: #1f2937;
+            line-height: 1.6;
           }
-          h1 { color: #6366f1; }
-          p { line-height: 1.6; }
+          h1 {
+            color: #3b82f6;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+          }
+          p { margin: 15px 0; }
         </style>
       </head>
       <body>
@@ -77,347 +158,281 @@ export default function App() {
     </html>
   `;
 
-  // Invoice data
-  const invoiceData = {
-    title: 'Invoice #12345',
-    date: new Date().toLocaleDateString(),
-    items: [
-      { name: 'Product A', quantity: 2, price: 29.99 },
-      { name: 'Product B', quantity: 1, price: 49.99 },
-      { name: 'Product C', quantity: 3, price: 19.99 },
-    ],
-    total: 169.96,
-  };
-
-  // Report data
-  const reportData = {
-    title: 'Monthly Sales Report',
-    author: 'John Doe',
-    date: new Date().toLocaleDateString(),
-    content: `
-      <h2>Executive Summary</h2>
-      <p>This report summarizes the monthly sales performance for the current period.</p>
-      <h2>Key Metrics</h2>
-      <ul>
-        <li>Total Sales: $50,000</li>
-        <li>Growth Rate: 15%</li>
-        <li>Top Product: Product A</li>
-      </ul>
-      <h2>Conclusion</h2>
-      <p>Sales performance has been strong this month with significant growth in key areas.</p>
-    `,
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
       {/* Header */}
-      <LinearGradient
-        colors={[colors.primary, colors.primaryLight]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <View style={styles.header}>
         <View style={styles.headerContent}>
-          <MaterialIcons name="print" size={48} color="white" />
-          <Text style={styles.headerTitle}>Print Component</Text>
-          <Text style={styles.headerSubtitle}>
-            Professional printing with expo-print
-          </Text>
+          <View style={styles.headerIcon}>
+            <MaterialIcons name="print" size={32} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Test Expo Print</Text>
+            <Text style={styles.headerSubtitle}>Print anything, anywhere</Text>
+          </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Basic Print */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="description" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Basic Print
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Print HTML content directly to printer
+        {/* Image Picker Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📸 Image Printing</Text>
+          <Text style={styles.sectionDescription}>
+            Pick an image from gallery or take a photo, then print it
           </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Print HTML"
-              onPress={() =>
-                handlePrint(
-                  () => PrintService.printHTML(sampleHTML),
-                  'Print HTML'
-                )
-              }
-              loading={loading === 'Print HTML'}
+
+          {selectedImage && (
+            <View style={styles.previewContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={() => setSelectedImage(null)}
+              >
+                <MaterialIcons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.galleryButton]}
+              onPress={handlePickImage}
+            >
+              <MaterialIcons name="photo-library" size={20} color="#fff" />
+              <Text style={styles.actionButtonText}>Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cameraButton]}
+              onPress={handleTakePhoto}
+            >
+              <MaterialIcons name="camera-alt" size={20} color="#fff" />
+              <Text style={styles.actionButtonText}>Camera</Text>
+            </TouchableOpacity>
+          </View>
+
+          {selectedImage && (
+            <ActionCard
               icon="print"
-            />
-          </View>
-        </View>
-
-        {/* PDF Generation */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="picture-as-pdf" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              PDF Generation
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Convert HTML to PDF file
-          </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Generate PDF"
+              title="Print Image"
+              description="Print the selected image"
               onPress={() =>
-                handlePrint(
-                  () => PrintService.printToFile(sampleHTML),
-                  'Generate PDF'
+                handleAction(
+                  () => ImageService.printImage(selectedImage),
+                  'Print Image'
                 )
               }
-              loading={loading === 'Generate PDF'}
-              icon="picture-as-pdf"
-              variant="secondary"
-            />
-            <PrintButton
-              title="Share PDF"
-              onPress={() =>
-                handlePrint(
-                  () =>
-                    PrintService.generateAndSharePDF(
-                      sampleHTML,
-                      'document.pdf'
-                    ),
-                  'Share PDF'
-                )
-              }
-              loading={loading === 'Share PDF'}
-              icon="share"
-              variant="outline"
-            />
-          </View>
-        </View>
-
-        {/* Orientation Options */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="screen-rotation" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Orientation Options
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Print in portrait or landscape mode
-          </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Portrait"
-              onPress={() =>
-                handlePrint(
-                  () => PrintService.printWithOrientation(sampleHTML, 'portrait'),
-                  'Portrait Print'
-                )
-              }
-              loading={loading === 'Portrait Print'}
-              icon="portrait"
-              variant="outline"
-            />
-            <PrintButton
-              title="Landscape"
-              onPress={() =>
-                handlePrint(
-                  () => PrintService.printWithOrientation(sampleHTML, 'landscape'),
-                  'Landscape Print'
-                )
-              }
-              loading={loading === 'Landscape Print'}
-              icon="landscape"
-              variant="outline"
-            />
-          </View>
-        </View>
-
-        {/* Invoice Template */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="receipt" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Invoice Template
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Professional invoice/receipt template
-          </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Print Invoice"
-              onPress={() =>
-                handlePrint(
-                  () => {
-                    const html = PrintService.generateInvoiceHTML(invoiceData);
-                    return PrintService.printHTML(html);
-                  },
-                  'Print Invoice'
-                )
-              }
-              loading={loading === 'Print Invoice'}
-              icon="receipt"
+              loading={loading === 'Print Image'}
               variant="primary"
             />
-            <PrintButton
-              title="Save Invoice PDF"
-              onPress={() =>
-                handlePrint(
-                  () => {
-                    const html = PrintService.generateInvoiceHTML(invoiceData);
-                    return PrintService.printToFile(html);
-                  },
-                  'Save Invoice PDF'
-                )
-              }
-              loading={loading === 'Save Invoice PDF'}
-              icon="save"
-              variant="secondary"
-            />
-          </View>
+          )}
         </View>
 
-        {/* Report Template */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="assessment" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Report Template
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Professional report template with formatting
+        {/* File Picker Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📄 File Printing</Text>
+          <Text style={styles.sectionDescription}>
+            Pick a file (PDF, image, text) and print it
           </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Print Report"
-              onPress={() =>
-                handlePrint(
-                  () => {
-                    const html = PrintService.generateReportHTML(reportData);
-                    return PrintService.printHTML(html);
-                  },
-                  'Print Report'
-                )
-              }
-              loading={loading === 'Print Report'}
-              icon="assessment"
-              variant="primary"
-            />
-            <PrintButton
-              title="Share Report"
-              onPress={() =>
-                handlePrint(
-                  () => {
-                    const html = PrintService.generateReportHTML(reportData);
-                    return PrintService.generateAndSharePDF(html, 'report.pdf');
-                  },
-                  'Share Report'
-                )
-              }
-              loading={loading === 'Share Report'}
-              icon="share"
-              variant="outline"
-            />
-          </View>
+
+          {selectedFile && (
+            <View style={styles.fileInfo}>
+              <MaterialIcons name="description" size={24} color="#3b82f6" />
+              <View style={styles.fileInfoText}>
+                <Text style={styles.fileName}>{selectedFile.name}</Text>
+                <Text style={styles.fileUri} numberOfLines={1}>
+                  {selectedFile.uri}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedFile(null)}>
+                <MaterialIcons name="close" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.filePickerButton}
+            onPress={handlePickFile}
+          >
+            <MaterialIcons name="folder-open" size={24} color="#3b82f6" />
+            <Text style={styles.filePickerText}>Pick File</Text>
+          </TouchableOpacity>
+
+          {selectedFile && (
+            <>
+              <ActionCard
+                icon="picture-as-pdf"
+                title="Print PDF"
+                description="Print PDF file"
+                onPress={() =>
+                  handleAction(
+                    () => FileService.printPDF(selectedFile.uri),
+                    'Print PDF'
+                  )
+                }
+                loading={loading === 'Print PDF'}
+                variant="secondary"
+              />
+              <ActionCard
+                icon="image"
+                title="Print Image File"
+                description="Print image file"
+                onPress={() =>
+                  handleAction(
+                    () => FileService.printImageFile(selectedFile.uri),
+                    'Print Image File'
+                  )
+                }
+                loading={loading === 'Print Image File'}
+                variant="success"
+              />
+              <ActionCard
+                icon="text-fields"
+                title="Print Text File"
+                description="Print text file"
+                onPress={() =>
+                  handleAction(
+                    () => FileService.printTextFile(selectedFile.uri),
+                    'Print Text File'
+                  )
+                }
+                loading={loading === 'Print Text File'}
+                variant="warning"
+              />
+            </>
+          )}
         </View>
 
-        {/* Label Template */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="label" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Label Template
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Shipping/shipping label template
+        {/* HTML Printing */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🌐 HTML Printing</Text>
+          <Text style={styles.sectionDescription}>
+            Print HTML content directly or convert to PDF
           </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Print Label"
-              onPress={() =>
-                handlePrint(
-                  () => {
-                    const html = PrintService.generateLabelHTML({
-                      title: 'Shipping Label',
-                      address: '123 Main St\nCity, State 12345',
-                      barcode: '|| ||| || |||',
-                    });
-                    return PrintService.printHTML(html);
-                  },
-                  'Print Label'
-                )
-              }
-              loading={loading === 'Print Label'}
-              icon="label"
-              variant="primary"
-            />
-          </View>
+
+          <ActionCard
+            icon="code"
+            title="Print HTML"
+            description="Print HTML content directly"
+            onPress={() =>
+              handleAction(
+                () => PrintService.printHTML(sampleHTML),
+                'Print HTML'
+              )
+            }
+            loading={loading === 'Print HTML'}
+            variant="primary"
+          />
+
+          <ActionCard
+            icon="picture-as-pdf"
+            title="Generate PDF"
+            description="Convert HTML to PDF file"
+            onPress={() =>
+              handleAction(
+                () => PrintService.printToFile(sampleHTML),
+                'Generate PDF'
+              )
+            }
+            loading={loading === 'Generate PDF'}
+            variant="secondary"
+          />
         </View>
 
-        {/* Custom Margins */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="margin" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Custom Margins
-            </Text>
-          </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
-            Print with custom margin settings
+        {/* Templates */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📋 Templates</Text>
+          <Text style={styles.sectionDescription}>
+            Pre-built templates for invoices, reports, and labels
           </Text>
-          <View style={styles.buttonContainer}>
-            <PrintButton
-              title="Print with Margins"
-              onPress={() =>
-                handlePrint(
-                  () =>
-                    PrintService.printWithMargins(sampleHTML, {
-                      top: 20,
-                      bottom: 20,
-                      left: 20,
-                      right: 20,
-                    }),
-                  'Print with Margins'
-                )
-              }
-              loading={loading === 'Print with Margins'}
-              icon="margin"
-              variant="outline"
-            />
-          </View>
+
+          <ActionCard
+            icon="receipt"
+            title="Invoice Template"
+            description="Print professional invoice"
+            onPress={() =>
+              handleAction(
+                () => {
+                  const html = PrintService.generateInvoiceHTML({
+                    title: 'Invoice #12345',
+                    date: new Date().toLocaleDateString(),
+                    items: [
+                      { name: 'Product A', quantity: 2, price: 29.99 },
+                      { name: 'Product B', quantity: 1, price: 49.99 },
+                    ],
+                    total: 109.97,
+                  });
+                  return PrintService.printHTML(html);
+                },
+                'Print Invoice'
+              )
+            }
+            loading={loading === 'Print Invoice'}
+            variant="success"
+          />
+
+          <ActionCard
+            icon="assessment"
+            title="Report Template"
+            description="Print formatted report"
+            onPress={() =>
+              handleAction(
+                () => {
+                  const html = PrintService.generateReportHTML({
+                    title: 'Monthly Report',
+                    author: 'John Doe',
+                    date: new Date().toLocaleDateString(),
+                    content: '<h2>Summary</h2><p>Report content here...</p>',
+                  });
+                  return PrintService.printHTML(html);
+                },
+                'Print Report'
+              )
+            }
+            loading={loading === 'Print Report'}
+            variant="warning"
+          />
         </View>
 
-        {/* Usage Examples */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="code" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Usage Examples
-            </Text>
-          </View>
-          <View style={[styles.codeBlock, { backgroundColor: colors.background }]}>
-            <Text style={[styles.codeText, { color: colors.text }]}>
-              {'// Print HTML directly\n'}
-              {'PrintService.printHTML(html);\n\n'}
-              {'// Generate PDF\n'}
-              {'const { uri } = await PrintService.printToFile(html);\n\n'}
-              {'// Print with orientation\n'}
-              {'PrintService.printWithOrientation(html, "landscape");\n\n'}
-              {'// Generate invoice\n'}
-              {'const invoiceHTML = PrintService.generateInvoiceHTML(data);'}
-            </Text>
-          </View>
+        {/* Options */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>⚙️ Print Options</Text>
+          <Text style={styles.sectionDescription}>
+            Customize print settings
+          </Text>
+
+          <ActionCard
+            icon="portrait"
+            title="Portrait Mode"
+            description="Print in portrait orientation"
+            onPress={() =>
+              handleAction(
+                () => PrintService.printWithOrientation(sampleHTML, 'portrait'),
+                'Portrait Print'
+              )
+            }
+            loading={loading === 'Portrait Print'}
+            variant="primary"
+          />
+
+          <ActionCard
+            icon="landscape"
+            title="Landscape Mode"
+            description="Print in landscape orientation"
+            onPress={() =>
+              handleAction(
+                () => PrintService.printWithOrientation(sampleHTML, 'landscape'),
+                'Landscape Print'
+              )
+            }
+            loading={loading === 'Landscape Print'}
+            variant="secondary"
+          />
         </View>
       </ScrollView>
     </View>
@@ -427,81 +442,183 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f9fafb',
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
+    backgroundColor: '#1f2937',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
+  },
+  headerIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
-    letterSpacing: 1,
+    color: '#fff',
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
-    textAlign: 'center',
+    fontSize: 14,
+    color: '#9ca3af',
+    marginTop: 4,
   },
   scrollView: {
     flex: 1,
   },
   content: {
     padding: 20,
-    paddingTop: 32,
   },
   section: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    marginBottom: 32,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
+    color: '#6b7280',
     marginBottom: 16,
     lineHeight: 20,
   },
-  buttonContainer: {
+  card: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  cardDescription: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  previewContainer: {
+    position: 'relative',
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    padding: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'contain',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  galleryButton: {
+    backgroundColor: '#3b82f6',
+  },
+  cameraButton: {
+    backgroundColor: '#10b981',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  fileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     gap: 12,
   },
-  codeBlock: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  fileInfoText: {
+    flex: 1,
   },
-  codeText: {
-    fontFamily: 'monospace',
-    fontSize: 14,
-    lineHeight: 20,
+  fileName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  fileUri: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  filePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  filePickerText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3b82f6',
   },
 });
